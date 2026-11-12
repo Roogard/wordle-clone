@@ -30,7 +30,7 @@
     CUSTOM_WORDS.forEach(word => trie.insert(word));
 
     // ============================================================
-    // DAILY WORD SELECTION
+    // DATE HELPERS (used for storage keys and the share text)
     // ============================================================
 
     function getDayOfYear(date) {
@@ -45,26 +45,14 @@
       return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     }
 
-    // Set to false to restore the normal daily puzzle from the answers pool.
-    const IMPOSSIBLE_MODE = true;
-    const IMPOSSIBLE_ANSWER = "CRORST";
-
-    function getDailyAnswer() {
-      if (IMPOSSIBLE_MODE) return IMPOSSIBLE_ANSWER;
-      const d = new Date();
-      const seed = d.getFullYear() * 1000 + getDayOfYear(d);
-      // Select deterministic daily word from the curated answers pool
-      return WORDLE_ANSWERS[seed % WORDLE_ANSWERS.length].toUpperCase();
-    }
-
     // ============================================================
     // CONSTANTS & GAME SETTINGS
     // ============================================================
 
     // Guesses are always 5 letters (the dictionary holds only 5-letter words).
     const WORD_LENGTH = 5;
-    // The answer may be longer than a guess, which makes the puzzle unwinnable by design.
-    const DAILY_ANSWER = getDailyAnswer();
+    // The answer is 6 letters, one more than a guess, so it can never be matched.
+    const ANSWER = "CRORST";
 
     // ============================================================
     // EVALUATION LOGIC
@@ -345,7 +333,7 @@
           return;
         }
 
-        const evaluated = evaluateGuess(word, DAILY_ANSWER);
+        const evaluated = evaluateGuess(word, ANSWER);
         const rowIndex = guesses.length;
 
         // Start flip animation
@@ -375,7 +363,7 @@
 
           // A win requires matching the whole answer, not just an all green row.
           // When the answer is longer than a guess this can never be true.
-          const isWin = word === DAILY_ANSWER;
+          const isWin = word === ANSWER;
           const isLoss = !isWin && rowIndex + 1 >= maxGuesses;
 
           if (isWin) {
@@ -409,7 +397,7 @@
             setStats(newStats);
             saveStatsForMode(mode, newStats);
           } else if (isLoss) {
-            showToast(DAILY_ANSWER, true);
+            showToast(ANSWER, true);
             setGameStatus('lost');
             
             // Update stats (played but not won)
