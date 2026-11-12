@@ -26,6 +26,9 @@
     // ============================================================
     const trie = new TrieEngine(WORDLE_VALID_TRIE);
 
+    // Merge any user-supplied words from CUSTOM_WORDS in dictionary.js
+    CUSTOM_WORDS.forEach(word => trie.insert(word));
+
     // ============================================================
     // DAILY WORD SELECTION
     // ============================================================
@@ -42,7 +45,12 @@
       return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     }
 
+    // Set to false to restore the normal daily puzzle from the answers pool.
+    const IMPOSSIBLE_MODE = true;
+    const IMPOSSIBLE_ANSWER = "CRORST";
+
     function getDailyAnswer() {
+      if (IMPOSSIBLE_MODE) return IMPOSSIBLE_ANSWER;
       const d = new Date();
       const seed = d.getFullYear() * 1000 + getDayOfYear(d);
       // Select deterministic daily word from the curated answers pool
@@ -53,21 +61,24 @@
     // CONSTANTS & GAME SETTINGS
     // ============================================================
 
+    // Guesses are always 5 letters (the dictionary holds only 5-letter words).
     const WORD_LENGTH = 5;
+    // The answer may be longer than a guess, which makes the puzzle unwinnable by design.
     const DAILY_ANSWER = getDailyAnswer();
 
     // ============================================================
     // EVALUATION LOGIC
     // ============================================================
 
+    // Scores a guess against one 5-letter window of the answer.
     // Returns array of {letter, state} where state is 'correct'|'present'|'absent'
-    function evaluateGuess(guess, answer) {
+    function scoreAgainstWindow(guess, window) {
       const result = Array(WORD_LENGTH).fill(null).map((_, i) => ({
         letter: guess[i],
         state: 'absent',
       }));
 
-      const answerLetters = answer.split('');
+      const answerLetters = window.split('');
       const guessLetters = guess.split('');
       const matched = Array(WORD_LENGTH).fill(false); // answer positions consumed
 
@@ -92,6 +103,34 @@
       }
 
       return result;
+    }
+
+    // Counts greens, then yellows, as a tiebreak score for a scored row.
+    function windowScore(scored) {
+      const greens = scored.filter(c => c.state === 'correct').length;
+      const yellows = scored.filter(c => c.state === 'present').length;
+      return greens * 10 + yellows;
+    }
+
+    // Evaluates a 5-letter guess against the answer, which may be longer.
+    // Every 5-letter window of the answer is scored and the most flattering
+    // one wins, so a guess like CRORS or RORST shows all green while the
+    // win check against the full answer can never pass.
+    function evaluateGuess(guess, answer) {
+      let best = null;
+      let bestScore = -1;
+
+      for (let offset = 0; offset + WORD_LENGTH <= answer.length; offset++) {
+        const window = answer.substr(offset, WORD_LENGTH);
+        const scored = scoreAgainstWindow(guess, window);
+        const score = windowScore(scored);
+        if (score > bestScore) {
+          bestScore = score;
+          best = scored;
+        }
+      }
+
+      return best;
     }
 
     // ============================================================
@@ -334,7 +373,9 @@
           setFlippingRow(null);
           updateKeyStates(evaluated);
 
-          const isWin = evaluated.every(e => e.state === 'correct');
+          // A win requires matching the whole answer, not just an all green row.
+          // When the answer is longer than a guess this can never be true.
+          const isWin = word === DAILY_ANSWER;
           const isLoss = !isWin && rowIndex + 1 >= maxGuesses;
 
           if (isWin) {
