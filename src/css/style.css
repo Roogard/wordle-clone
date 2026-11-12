@@ -127,6 +127,7 @@ body {
 .board-row {
   display: flex;
   gap: 6px;
+  position: relative;
 }
 
 .tile {
@@ -616,4 +617,48 @@ body {
   .mode-toggle {
     left: 8px;
   }
+}
+
+/* ============================================================
+   Secret 6th letter
+   Bare letter, no box. Absolutely positioned so it never changes
+   the row width, which keeps the board centered with no shift when
+   it appears. Sits 6px to the right of the 5th tile, matching the
+   gap between the boxes.
+   ============================================================ */
+.tile.tile-secret {
+  position: absolute;
+  left: 100%;
+  /* Wider than the 6px gap between boxes. With no box of its own the
+     letter needs more room to read as separate from the five. */
+  margin-left: 14px;
+  top: 0;
+  bottom: 0;
+  height: auto;
+  width: 1.1em;
+  border: none;
+  background: none;
+  transform: none;
+  animation: secret-fade 0.18s ease-out;
+}
+
+/* No box, so the state shows in the letter colour instead */
+.tile.tile-secret.correct {
+  background: none;
+  color: #6aaa64;
+}
+
+.tile.tile-secret.present {
+  background: none;
+  color: #c9b458;
+}
+
+.tile.tile-secret.absent {
+  background: none;
+  color: #6a6a6c;
+}
+
+@keyframes secret-fade {
+  0%   { opacity: 0; transform: translateX(-4px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
